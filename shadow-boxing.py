@@ -1,7 +1,6 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-from mediapipe.python.solutions.hands import HandLandmark
 
 #this only works with older version of mediapipe 0.10.9
 #you also need python <=3.10 to run mediapipe
@@ -30,6 +29,7 @@ direction = ["left", "right", "up", "down"]
 while True:
   success, frame = cap.read()
   text = "None"
+  text2 = "None"
 
   if success:
     RGB_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -58,15 +58,6 @@ while True:
         
         wrist = hand_landmarks.landmark[0]
 
-        # if wrist.x <= 0.3 and wrist.y > 0.3 and wrist.y < 0.7:
-        #   text = direction[0] #left
-        # elif wrist.x >= 0.7 and wrist.y > 0.3 and wrist.y < 0.7:
-        #   text = direction[1] #right
-        # elif wrist.y <= 0.3:
-        #   text = direction[2] #up
-        # elif wrist.y >= 0.7:
-        #   text = direction[3] #down
-
         mp_drawing.draw_landmarks(
             frame,
             hand_landmarks,
@@ -94,24 +85,39 @@ while True:
       thickness
     )
 
-
-
   #face
   if result_face.multi_face_landmarks:
     for face_landmarks in result_face.multi_face_landmarks:
 
+      #top of face
       top_forehead = face_landmarks.landmark[10]
-
-      middle_forehead = face_landmarks.landmark[151]
       middle_eyebrow = face_landmarks.landmark[9]
-      low_eyebrow = face_landmarks.landmark[8]
 
-      face_height_diff = abs(top_forehead.y - middle_eyebrow.y)
-      if face_height_diff <= 0.05:
-          text = "looking up"
-        
-      # for lm_idx, lm in enumerate(face_landmarks.landmark):
-      #     print(f"LANDMARK_IDX={lm_idx} x={lm.x:.3f}, y={lm.y:.3f}, z={lm.z:.3f}")
+      #bottom of face
+      under_lip = face_landmarks.landmark[18]
+      chin = face_landmarks.landmark[175]
+
+      top_nose = face_landmarks.landmark[4]
+      #face right side
+      right_right_cheek = face_landmarks.landmark[352]
+
+      #face left side
+      left_left_cheek = face_landmarks.landmark[137]
+
+
+      forehead_height_diff = abs(top_forehead.y - middle_eyebrow.y)
+      chin_height_diff = abs(under_lip.y - chin.y)
+      right_cheek_width_diff = abs(top_nose.x - right_right_cheek.x)
+      left_cheek_width_diff = abs(top_nose.x - left_left_cheek.x)
+
+      if forehead_height_diff <= 0.04:
+          text2 = "looking up"
+      elif chin_height_diff <= 0.035:
+          text2 = "looking down"
+      elif right_cheek_width_diff <= 0.03:
+          text2 = "looking right"
+      elif left_cheek_width_diff <= 0.03:
+          text2 = "looking left"
 
       mp_drawing.draw_landmarks(
           image=frame,
@@ -128,15 +134,15 @@ while True:
     font_scale = 1
     thickness = 2
 
-    (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    (text_width, text_height), baseline = cv2.getTextSize(text2, font, font_scale, thickness)
 
     #hand direction text
     x = (width - text_width) // 2
     y = text_height + 10
     cv2.putText(
       frame,
-      text, 
-      (x, y + 10), 
+      text2, 
+      (x, y + 30), 
       font, 
       font_scale, 
       (255, 255, 255), 
