@@ -3,6 +3,7 @@ import mediapipe as mp
 import numpy as np
 import random
 import time
+from numpy.typing import NDArray
 
 #this only works with older version of mediapipe 0.10.9
 #you also need python <=3.10 to run mediapipe
@@ -25,6 +26,27 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
+# Define how long the loop should run (in seconds)
+duration = 8
+won = True
+
+def display_text(frame: NDArray[np.uint8], text: str, height: int, width: int, font_scale: int, thickness: int):
+  font = cv2.FONT_HERSHEY_SIMPLEX
+  (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+  #hand direction text
+  x = (width - text_width) // 2
+  y = text_height + 10
+  
+  cv2.putText(
+  frame,
+  text, 
+  (x,y), 
+  font, 
+  font_scale, 
+  (255, 255, 255), 
+  thickness
+  )
 
 def offense():
   print("On Offense")
@@ -40,15 +62,16 @@ def offense():
     directions.remove(random_direction)
     print(f"bot chose: {random_direction}")
 
-    # Define how long the loop should run (in seconds)
-    duration = 8
-
     # Record the start time
     start_time = time.time()
 
-    while time.time() - start_time < duration:
+    while time.time() - start_time <= duration:
+      #display the time:
+
       success, frame = cap.read()
       text = "None"
+      time_left = duration - round(time.time() - start_time)
+      display_text(frame, str(time_left), 0, 50, 2, 2)
 
       if success:
         RGB_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -82,25 +105,7 @@ def offense():
             )
 
         height, width, _ = frame.shape
-
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 1
-        thickness = 2
-
-        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
-
-        #hand direction text
-        x = (width - text_width) // 2
-        y = text_height + 10
-        cv2.putText(
-          frame,
-          text, 
-          (x, y), 
-          font, 
-          font_scale, 
-          (255, 255, 255), 
-          thickness
-        )
+        display_text(frame, text, height, width, 1, 2)
 
       cv2.imshow('Webcam', frame)
 
@@ -121,7 +126,6 @@ def offense():
       on_offense = False
       game_over = True
     
-
 def defense():
   print("On Defense")
 
@@ -136,14 +140,13 @@ def defense():
     directions.remove(random_direction)
     print(f"bot chose: {random_direction}")
 
-    # Define how long the loop should run (in seconds)
-    duration = 8
-
     # Record the start time
     start_time = time.time()
-    while time.time() - start_time < duration:
+    while time.time() - start_time <= duration:
       success, frame = cap.read()
       text = "None"
+      time_left = duration - round(time.time() - start_time)
+      display_text(frame, str(time_left), 0, 50, 2, 2)
 
       if success:
         RGB_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -191,31 +194,15 @@ def defense():
               connection_drawing_spec=mp_drawing_styles
               .get_default_face_mesh_tesselation_style()
           )
-        #face direction text
+
         height, width, _ = frame.shape
-
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 1
-        thickness = 2
-
-        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
-
-        #hand direction text
-        x = (width - text_width) // 2
-        y = text_height + 10
-        cv2.putText(
-          frame,
-          text, 
-          (x, y + 30), 
-          font, 
-          font_scale, 
-          (255, 255, 255), 
-          thickness
-        )
+        display_text(frame, text, height, width, 1, 2)
 
       cv2.imshow('Webcam', frame)
 
       if cv2.waitKey(1) & 0xFF == ord('q'):
+        on_defense = False
+        game_over = True
         break
 
     print(f"Your choice: {text}")
@@ -225,13 +212,33 @@ def defense():
 
     if len(directions) == 1 and random_direction == text:
       print("You Lost")
+      won = False
       on_defense = False
       game_over = True
 
 game_over = False
+
 #game loop
 while not game_over:
   offense()
   defense()
+
+#ending screen
+while True:
+    success, frame = cap.read()
+    if not success:
+        print("Failed to grab frame")
+        break
+
+    height, width, _ = frame.shape
+    if won:
+      display_text(frame, "You Won", height, width, 1, 2)
+    else:
+      display_text(frame, "You Lost", height, width, 1, 2)
+
+    cv2.imshow("Webcam", frame)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cv2.destroyAllWindows()
